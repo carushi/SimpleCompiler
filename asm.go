@@ -19,10 +19,25 @@ func (asm Asm) Output(s string) {
 }
 
 func (asm Asm) ParseLine(s string) string {
-	if s[0] == '#' || s[0:1] == "//" {
+	for {
+		ind := strings.Index(s, "//")
+		pre := ""
+		if ind < 0 {
+			break
+		} else if ind > 0 {
+			pre = s[0:ind]
+		}
+		nl := strings.Index(s[(ind+1):], "\n")
+		if nl > 0 {
+			s = pre + s[ind+1+nl+1:]
+		} else {
+			s = ""
+		}
+	}
+	if len(s) == 0 || s[0] == '#' {
 		return ""
 	} else {
-		return s + "\n"
+		return s
 	}
 }
 
@@ -31,22 +46,22 @@ func (asm Asm) Parse(reader *bufio.Reader, writer *bufio.Writer) {
 	pnum := 0
 	for {
 		line, _, err := (*reader).ReadLine()
-		pline += string(line)
+		pline += string(line) + "\n"
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			panic(err)
 		}
-		if len(pline) == 0 {
+		if len(pline) == 1 {
 			continue
 		}
 		pnum = strings.Count(pline, "{") - strings.Count(pline, "}")
-		if pline[0] == '#' || (pnum == 0 && strings.Count(pline, ";") > 0) {
-			writer.WriteString(asm.ParseLine(pline))
+		if pline[0] == '#' || pnum == 0 {
+			asmcode := asm.ParseLine(pline)
+			writer.WriteString(asmcode)
 			pline = ""
 		}
 	}
-	writer.WriteString(pline + "\n")
 }
 
 func (asm Asm) ReadWrite(ifile string, ofile string) {
